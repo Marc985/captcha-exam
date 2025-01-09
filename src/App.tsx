@@ -6,8 +6,52 @@ const App: React.FC = () => {
     const [output, setOutput] = useState<string>("");
     const [isRunning, setIsRunning] = useState<boolean>(false);
     const [captchaRequired, setCaptchaRequired] = useState<boolean>(false);
+    const [currentIndex, setCurrentIndex] = useState<number>(0);
 
     const apiUrl: string = "https://api.prod.jcloudify.com/whoami";
+
+    const fetchWithRetry = async (url: string, retries: number = 3): Promise<Response> => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                const response = await fetch(url);
+                return response;
+            } catch (error) {
+                if (attempt === retries) throw error;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+        throw new Error("Failed after retries");
+    };
+
+    const runSequence = async (startIndex: number = 1) => {
+        for (let i = startIndex; i <= Number(number); i++) {
+            setCurrentIndex(i);
+
+            try {
+                const response = await fetchWithRetry(apiUrl);
+
+                if (response.ok && response.status === 403) {
+                    setOutput((prev) => prev + `${i}. Forbidden\n`);
+                } else if (response.status === 405) {
+                    setOutput((prev) => prev + `${i}. Captcha required, stopping the sequence.\n`);
+                    setCaptchaRequired(true);
+                    break;
+                } else {
+                    setOutput((prev) => prev + `${i}. Forbidden\n`);
+                }
+            } catch (error) {
+                setOutput((prev) => prev + `${i}. Error: ${error instanceof Error ? error.message : "Unknown error"}\n`);
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+
+        if (!captchaRequired) {
+            setOutput((prev) => prev + "Sequence complete!");
+        }
+
+        setIsRunning(false);
+    };
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -19,49 +63,14 @@ const App: React.FC = () => {
 
         setIsRunning(true);
         setOutput("");
-        setCaptchaRequired(false); // Reset captcha flag
-
-        // Fonction pour exécuter la boucle
-        const runSequence = async () => {
-            for (let i = 1; i <= number; i++) {
-                try {
-                    const response = await fetch(apiUrl);
-
-                    if (response.ok && response.status === 403) {
-                        setOutput((prev) => prev + `${i}. Forbidden\n`);
-                    } else if (response.status === 405) {
-                        // Si la réponse est 405, activer le captcha
-                        setOutput((prev) => prev + `${i}. Captcha required, stopping the sequence.\n`);
-                        setCaptchaRequired(true); // Afficher le captcha
-                        break; // Arrêter la séquence
-                    } else {
-                        setOutput((prev) => prev + `${i}. Forbidden\n`);
-                    }
-                } catch (error) {
-                    setOutput((prev) => prev + `${i}. Error: ${error instanceof Error ? error.message : "Unknown error"}\n`);
-                }
-
-                await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
-            }
-
-            if (!captchaRequired) {
-                setOutput((prev) => prev + "Sequence complete!");
-            }
-
-            setIsRunning(false);
-        };
-
-        runSequence();
+        setCaptchaRequired(false);
+        await runSequence(1);
     };
 
-    // Fonction de reprise de la boucle après CAPTCHA
     const handleCaptchaSuccess = async (wafToken: string) => {
         console.log("WAF Token reçu :", wafToken);
-        // Vous pouvez envoyer le token au backend pour validation ici si nécessaire.
-        // Une fois validé, reprendre la boucle
         setCaptchaRequired(false);
-        const mockEvent = { preventDefault: () => {} } as React.FormEvent;
-        await handleSubmit(mockEvent); // Reprendre la soumission du formulaire
+        await runSequence(currentIndex + 1); // Reprendre après le dernier index traité
     };
 
     return (
@@ -95,9 +104,11 @@ const App: React.FC = () => {
             >
                 {output}
             </pre>
-            {captchaRequired && <CaptchaComponent onCaptchaSuccess={handleCaptchaSuccess} />} {/* Passer la fonction de succès */}
+            {isRunning && <progress value={currentIndex} max={number}></progress>}
+            {captchaRequired && <CaptchaComponent onCaptchaSuccess={handleCaptchaSuccess} />}
         </div>
     );
 };
 
 export default App;
+
