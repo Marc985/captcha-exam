@@ -35,6 +35,7 @@ const CaptchaComponent: React.FC<CaptchaComponentProps> = ({ onCaptchaSuccess })
 
       if (container && window.AwsWafCaptcha) {
         clearInterval(interval); // Arrêter la vérification répétée
+        
         const apiKey = import.meta.env.VITE_WAF_API;
 
         window.AwsWafCaptcha.renderCaptcha(container, {
