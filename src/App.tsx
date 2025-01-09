@@ -35,7 +35,7 @@ const App: React.FC = () => {
                         setCaptchaRequired(true); // Afficher le captcha
                         break; // Arrêter la séquence
                     } else {
-                        setOutput((prev) => prev + `${i}. Forbidden (other)\n`);
+                        setOutput((prev) => prev + `${i}. Forbidden\n`);
                     }
                 } catch (error) {
                     setOutput((prev) => prev + `${i}. Error: ${error instanceof Error ? error.message : "Unknown error"}\n`);

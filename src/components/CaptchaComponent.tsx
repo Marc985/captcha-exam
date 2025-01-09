@@ -21,18 +21,40 @@ interface CaptchaComponentProps {
 }
 
 const CaptchaComponent: React.FC<CaptchaComponentProps> = ({ onCaptchaSuccess }) => {
+
   useEffect(() => {
-    const captchaScript = document.createElement("script");
-    captchaScript.src = "https://b82b1763d1c3.ef7ef6cc.eu-west-3.captcha.awswaf.com/b82b1763d1c3/jsapi.js";
-    captchaScript.type = "text/javascript";
-    captchaScript.defer = true;
+  const captchaScript = document.createElement("script");
 
-    document.head.appendChild(captchaScript);
+  captchaScript.src = "https://09bd26e5e726.eu-west-3.captcha-sdk.awswaf.com/09bd26e5e726/jsapi.js";
+  captchaScript.type = "text/javascript";
+  captchaScript.defer = true;
 
-    return () => {
-      document.head.removeChild(captchaScript);
-    };
-  }, []);
+  captchaScript.onload = () => {
+    const interval = setInterval(() => {
+      const container = document.getElementById("my-captcha-container");
+
+      if (container && window.AwsWafCaptcha) {
+        clearInterval(interval); // Arrêter la vérification répétée
+        const apiKey = import.meta.env.VITE_WAF_API;
+
+        window.AwsWafCaptcha.renderCaptcha(container, {
+          apiKey: apiKey,
+          onSuccess: onCaptchaSuccess,
+          onError: (error: unknown) => {
+            console.error("Captcha Error:", error);
+          },
+        });
+      }
+    }, 100); // Vérifiez toutes les 100ms jusqu'à ce que le conteneur soit disponible
+  };
+
+  document.head.appendChild(captchaScript);
+
+  return () => {
+    document.head.removeChild(captchaScript);
+  };
+}, [onCaptchaSuccess]);
+
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_WAF_API;
