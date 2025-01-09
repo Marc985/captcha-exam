@@ -60,7 +60,6 @@ const CaptchaComponent: React.FC<CaptchaComponentProps> = ({ onCaptchaSuccess })
     const apiKey = import.meta.env.VITE_WAF_API_KEY;
 
     const container = document.getElementById("my-captcha-container");
-    console.log("ito le api key:",apiKey);
     
 
     if (window.AwsWafCaptcha && container) {
